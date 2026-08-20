@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# Per-service scrape targets are added in Phase 8 once the app services
+# expose /actuator/prometheus on the shared compose network. This stub keeps
+# the container startable during earlier phases.
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

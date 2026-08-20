@@ -1,0 +1,12 @@
+// Grafana Alloy configuration (replaces Promtail, which is EOL).
+//
+// Real log-source components (structured JSON application logs correlated by
+// trace ID, discovered via the Docker daemon or a shared volume) are wired up
+// in Phase 8. For now this just declares the Loki write destination so the
+// container starts with a valid config.
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
