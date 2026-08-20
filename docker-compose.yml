@@ -27,6 +27,14 @@ services:
       dockerfile: product-service/Dockerfile
     ports:
       - "${PRODUCT_SERVICE_PORT:-8082}:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - gateway-sample-net
 
@@ -36,6 +44,14 @@ services:
       dockerfile: pricing-service/Dockerfile
     ports:
       - "${PRICING_SERVICE_PORT:-8083}:8083"
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - gateway-sample-net
 
@@ -47,8 +63,8 @@ services:
     networks:
       - gateway-sample-net
 
-# No depends_on/healthcheck-gated startup ordering yet: these services have no
-# inter-service calls until Phase 5 (gateway routing) and Phase 6 (api-server
-# delegation), and no database/JWT/Redis wiring until Phases 2-4. Once that
-# logic lands, add `depends_on: condition: service_healthy` against the infra
-# services (and each other) using each app's /actuator/health.
+# gateway, api-server, and web-ui still have no depends_on/healthcheck-gated
+# startup ordering: they have no inter-service calls until Phase 5 (gateway
+# routing) and Phase 6 (api-server delegation), and no JWT/Redis wiring until
+# Phases 3-4. product-service and pricing-service already depend on postgres
+# above, since their Phase 2 Flyway migrations need it healthy at startup.

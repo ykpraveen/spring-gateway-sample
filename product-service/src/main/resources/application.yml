@@ -1,6 +1,15 @@
 spring:
   application:
     name: product-service
+  flyway:
+    schemas: product
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: product
 
 server:
   port: 8082

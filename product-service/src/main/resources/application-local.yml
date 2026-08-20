@@ -1,3 +1,11 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:gatewaysample}
+    username: ${POSTGRES_USER:gatewaysample}
+    password: ${POSTGRES_PASSWORD:dev-only-postgres-password}
+  flyway:
+    locations: classpath:db/migration,classpath:db/seed
+
 logging:
   level:
     root: INFO

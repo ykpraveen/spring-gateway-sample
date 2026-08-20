@@ -1,6 +1,15 @@
 spring:
   application:
     name: pricing-service
+  flyway:
+    schemas: pricing
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: pricing
 
 server:
   port: 8083
