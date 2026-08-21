@@ -1,4 +1,16 @@
 spring:
+  r2dbc:
+    url: r2dbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:gatewaysample}
+    username: ${POSTGRES_USER:gatewaysample}
+    password: ${POSTGRES_PASSWORD:dev-only-postgres-password}
+  flyway:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:gatewaysample}
+    user: ${POSTGRES_USER:gatewaysample}
+    password: ${POSTGRES_PASSWORD:dev-only-postgres-password}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
   security:
     oauth2:
       resourceserver:
@@ -9,6 +21,9 @@ app:
   security:
     jwt:
       issuer: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/gateway-sample}
+    api-key:
+      pepper: ${API_KEY_PEPPER:dev-only-api-key-pepper-change-me}
+      cache-ttl: 60s
 
 logging:
   level:

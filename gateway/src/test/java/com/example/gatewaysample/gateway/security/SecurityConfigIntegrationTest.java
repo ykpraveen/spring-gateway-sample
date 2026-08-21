@@ -1,5 +1,6 @@
 package com.example.gatewaysample.gateway.security;
 
+import com.example.gatewaysample.gateway.AbstractIntegrationTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -10,7 +11,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @Import(TestSecurityConfig.class)
-class SecurityConfigIntegrationTest {
+class SecurityConfigIntegrationTest extends AbstractIntegrationTest {
 
     @LocalServerPort
     private int port;

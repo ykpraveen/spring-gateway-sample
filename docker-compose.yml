@@ -11,9 +11,22 @@ services:
       - "${GATEWAY_PORT:-8080}:8080"
     environment:
       SPRING_PROFILES_ACTIVE: local
+      SPRING_R2DBC_URL: r2dbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_R2DBC_USERNAME: ${POSTGRES_USER}
+      SPRING_R2DBC_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_FLYWAY_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_FLYWAY_USER: ${POSTGRES_USER}
+      SPRING_FLYWAY_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
       APP_SECURITY_JWT_ISSUER: ${KEYCLOAK_ISSUER_URI}
+      APP_SECURITY_API_KEY_PEPPER: ${API_KEY_PEPPER}
     depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
       keycloak:
         condition: service_healthy
     networks:
@@ -86,5 +99,7 @@ services:
       - gateway-sample-net
 
 # All four Spring services now depend on keycloak (Phase 3 JWT validation).
-# web-ui has no inter-service calls or Redis wiring until Phase 4/5/7, so it
-# still has no depends_on/healthcheck-gated startup ordering.
+# gateway also depends on postgres (api_client schema/table) and redis
+# (validated API-client metadata cache) as of Phase 4. web-ui has no
+# inter-service calls until Phase 7, so it still has no depends_on/
+# healthcheck-gated startup ordering.
