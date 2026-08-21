@@ -3,6 +3,8 @@ package com.example.gatewaysample.product.web;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.gatewaysample.product.AbstractIntegrationTest;
+import com.example.gatewaysample.product.security.TestJwtSupport;
+import com.example.gatewaysample.product.security.TestSecurityConfig;
 import com.example.gatewaysample.product.web.dto.ProductRequest;
 import com.example.gatewaysample.product.web.dto.ProductResponse;
 import java.util.Map;
@@ -11,11 +13,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Import;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.client.RestTestClient;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@Import(TestSecurityConfig.class)
 class ProductControllerIntegrationTest extends AbstractIntegrationTest {
 
     @LocalServerPort
@@ -25,7 +29,11 @@ class ProductControllerIntegrationTest extends AbstractIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        client = RestTestClient.bindToServer().baseUrl("http://localhost:" + port).build();
+        String token = TestJwtSupport.token("test-user", "catalog.read", "catalog.write");
+        client = RestTestClient.bindToServer()
+                .baseUrl("http://localhost:" + port)
+                .defaultHeader("Authorization", "Bearer " + token)
+                .build();
     }
 
     @Test

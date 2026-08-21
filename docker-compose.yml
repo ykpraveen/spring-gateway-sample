@@ -9,6 +9,13 @@ services:
       dockerfile: gateway/Dockerfile
     ports:
       - "${GATEWAY_PORT:-8080}:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
+      APP_SECURITY_JWT_ISSUER: ${KEYCLOAK_ISSUER_URI}
+    depends_on:
+      keycloak:
+        condition: service_healthy
     networks:
       - gateway-sample-net
 
@@ -18,6 +25,13 @@ services:
       dockerfile: api-server/Dockerfile
     ports:
       - "${API_SERVER_PORT:-8081}:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
+      APP_SECURITY_JWT_ISSUER: ${KEYCLOAK_ISSUER_URI}
+    depends_on:
+      keycloak:
+        condition: service_healthy
     networks:
       - gateway-sample-net
 
@@ -32,8 +46,12 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
+      APP_SECURITY_JWT_ISSUER: ${KEYCLOAK_ISSUER_URI}
     depends_on:
       postgres:
+        condition: service_healthy
+      keycloak:
         condition: service_healthy
     networks:
       - gateway-sample-net
@@ -49,8 +67,12 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
+      APP_SECURITY_JWT_ISSUER: ${KEYCLOAK_ISSUER_URI}
     depends_on:
       postgres:
+        condition: service_healthy
+      keycloak:
         condition: service_healthy
     networks:
       - gateway-sample-net
@@ -63,8 +85,6 @@ services:
     networks:
       - gateway-sample-net
 
-# gateway, api-server, and web-ui still have no depends_on/healthcheck-gated
-# startup ordering: they have no inter-service calls until Phase 5 (gateway
-# routing) and Phase 6 (api-server delegation), and no JWT/Redis wiring until
-# Phases 3-4. product-service and pricing-service already depend on postgres
-# above, since their Phase 2 Flyway migrations need it healthy at startup.
+# All four Spring services now depend on keycloak (Phase 3 JWT validation).
+# web-ui has no inter-service calls or Redis wiring until Phase 4/5/7, so it
+# still has no depends_on/healthcheck-gated startup ordering.

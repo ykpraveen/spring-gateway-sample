@@ -1,16 +1,14 @@
-FROM eclipse-temurin:25-jdk AS build
+FROM maven:3.9-eclipse-temurin-25 AS build
 WORKDIR /workspace
 
 COPY pom.xml .
-COPY mvnw .
-COPY .mvn .mvn
 COPY gateway/pom.xml gateway/pom.xml
 COPY api-server/pom.xml api-server/pom.xml
 COPY product-service/pom.xml product-service/pom.xml
 COPY pricing-service/pom.xml pricing-service/pom.xml
 COPY gateway/src gateway/src
 
-RUN ./mvnw -pl gateway -am -DskipTests package
+RUN mvn -pl gateway -am -DskipTests package
 
 FROM eclipse-temurin:25-jre AS runtime
 WORKDIR /app

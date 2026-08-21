@@ -1,0 +1,77 @@
+{
+  "realm": "gateway-sample",
+  "enabled": true,
+  "sslRequired": "none",
+  "accessTokenLifespan": 300,
+  "roles": {
+    "realm": [
+      { "name": "catalog.read", "description": "Read product catalog data" },
+      { "name": "catalog.write", "description": "Create, update, and delete product catalog data" },
+      { "name": "pricing.read", "description": "Read pricing data" },
+      { "name": "pricing.write", "description": "Create, update, and delete pricing data" }
+    ]
+  },
+  "defaultRole": {
+    "name": "default-roles-gateway-sample",
+    "description": "Default roles",
+    "composite": true,
+    "clientRole": false
+  },
+  "clients": [
+    {
+      "clientId": "web-ui",
+      "name": "Vue traffic simulator",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["http://localhost:8090/*"],
+      "webOrigins": ["http://localhost:8090"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    },
+    {
+      "clientId": "smoke-tests",
+      "name": "Automated smoke test client",
+      "description": "Confidential client used only by smoke-tests/ to obtain tokens via the password grant; never used by the browser.",
+      "enabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "secret": "dev-only-smoke-tests-secret",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false
+    }
+  ],
+  "users": [
+    {
+      "username": "alice",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "alice@example.com",
+      "firstName": "Alice",
+      "lastName": "Partner",
+      "credentials": [
+        { "type": "password", "value": "alice-dev-password", "temporary": false }
+      ],
+      "realmRoles": ["catalog.read", "catalog.write", "pricing.read", "pricing.write"]
+    },
+    {
+      "username": "bob",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "bob@example.com",
+      "firstName": "Bob",
+      "lastName": "Standard",
+      "credentials": [
+        { "type": "password", "value": "bob-dev-password", "temporary": false }
+      ],
+      "realmRoles": ["catalog.read", "pricing.read"]
+    }
+  ]
+}

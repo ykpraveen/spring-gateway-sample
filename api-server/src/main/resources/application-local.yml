@@ -1,3 +1,15 @@
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8180/realms/gateway-sample/protocol/openid-connect/certs}
+
+app:
+  security:
+    jwt:
+      issuer: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/gateway-sample}
+
 logging:
   level:
     root: INFO
