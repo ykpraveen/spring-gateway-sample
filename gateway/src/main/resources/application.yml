@@ -3,6 +3,45 @@ spring:
     name: gateway
   flyway:
     schemas: gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          default-filters:
+            - RemoveRequestHeader=X-API-Key
+          routes:
+            - id: products-read
+              uri: ${API_SERVER_URI:http://localhost:8081}
+              predicates:
+                - Path=/api/products/**
+                - Method=GET
+              metadata:
+                rate-limit-category: read
+                required-authority: catalog.read
+            - id: products-write
+              uri: ${API_SERVER_URI:http://localhost:8081}
+              predicates:
+                - Path=/api/products/**
+                - Method=POST,PUT,PATCH,DELETE
+              metadata:
+                rate-limit-category: write
+                required-authority: catalog.write
+            - id: prices-read
+              uri: ${API_SERVER_URI:http://localhost:8081}
+              predicates:
+                - Path=/api/prices/**
+                - Method=GET
+              metadata:
+                rate-limit-category: read
+                required-authority: pricing.read
+            - id: prices-write
+              uri: ${API_SERVER_URI:http://localhost:8081}
+              predicates:
+                - Path=/api/prices/**
+                - Method=POST,PUT,PATCH,DELETE
+              metadata:
+                rate-limit-category: write
+                required-authority: pricing.write
 
 server:
   port: 8080
@@ -16,3 +55,22 @@ management:
     health:
       probes:
         enabled: true
+
+app:
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGIN:http://localhost:5173}
+  rate-limit:
+    route:
+      read:
+        replenish-rate: 10
+        burst-capacity: 20
+      write:
+        replenish-rate: 2
+        burst-capacity: 5
+    client:
+      replenish-rate: 5
+      burst-capacity: 10
+    ip:
+      replenish-rate: 15
+      burst-capacity: 30
+    trusted-proxies: []

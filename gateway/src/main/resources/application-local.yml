@@ -24,6 +24,13 @@ app:
     api-key:
       pepper: ${API_KEY_PEPPER:dev-only-api-key-pepper-change-me}
       cache-ttl: 60s
+  rate-limit:
+    # Development-only: trusts X-Forwarded-For from localhost so the traffic simulator can
+    # present simulated client IPs for the per-IP rate-limit bucket. Never enabled outside local
+    # development.
+    trusted-proxies:
+      - 127.0.0.1
+      - "0:0:0:0:0:0:0:1"
 
 logging:
   level:

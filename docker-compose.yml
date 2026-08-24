@@ -22,6 +22,8 @@ services:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
       APP_SECURITY_JWT_ISSUER: ${KEYCLOAK_ISSUER_URI}
       APP_SECURITY_API_KEY_PEPPER: ${API_KEY_PEPPER}
+      API_SERVER_URI: http://api-server:8081
+      APP_CORS_ALLOWED_ORIGIN: ${APP_CORS_ALLOWED_ORIGIN}
     depends_on:
       postgres:
         condition: service_healthy
