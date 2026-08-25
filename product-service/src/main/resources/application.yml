@@ -14,6 +14,12 @@ spring:
 server:
   port: 8082
 
+app:
+  dev:
+    # Development-only: mode=slow sleeps this long before responding, long enough to exceed
+    # api-server's Resilience4j time limiter (Phase 6) and trigger its circuit breaker.
+    slow-delay: 5s
+
 management:
   endpoints:
     web:

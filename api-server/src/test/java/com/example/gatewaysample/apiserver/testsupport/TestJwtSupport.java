@@ -1,4 +1,4 @@
-package com.example.gatewaysample.apiserver.security;
+package com.example.gatewaysample.apiserver.testsupport;
 
 import com.nimbusds.jose.JOSEObjectType;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -12,13 +12,13 @@ import java.util.List;
 import java.util.Map;
 
 /** Signs HS256 test tokens accepted only by {@link TestSecurityConfig}'s decoder, never by Keycloak. */
-final class TestJwtSupport {
+public final class TestJwtSupport {
 
     static final String SECRET = "test-only-hmac-secret-for-api-server-do-not-reuse";
 
     private TestJwtSupport() {}
 
-    static String token(String subject, String... roles) {
+    public static String token(String subject, String... roles) {
         try {
             JWTClaimsSet claims = new JWTClaimsSet.Builder()
                     .subject(subject)

@@ -1,5 +1,7 @@
 package com.example.gatewaysample.apiserver.security;
 
+import com.example.gatewaysample.apiserver.testsupport.TestJwtSupport;
+import com.example.gatewaysample.apiserver.testsupport.TestSecurityConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -34,12 +36,15 @@ class SecurityConfigIntegrationTest {
 
     @Test
     void authenticatesRequestsWithAValidToken() {
+        // No product-service is running in this security-only test context, so the authenticated
+        // request reaches ProductController, WebClient fails to connect, and — with no cached
+        // value to fall back to — api-server reports 503 rather than rejecting the credential.
         String token = TestJwtSupport.token("test-user", "catalog.read");
         client.get()
                 .uri("/api/products")
                 .header("Authorization", "Bearer " + token)
                 .exchange()
                 .expectStatus()
-                .isNotFound();
+                .isEqualTo(503);
     }
 }

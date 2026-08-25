@@ -2,6 +2,7 @@ package com.example.gatewaysample.pricing.web;
 
 import com.example.gatewaysample.pricing.domain.Price;
 import com.example.gatewaysample.pricing.exception.PriceNotFoundException;
+import com.example.gatewaysample.pricing.exception.SimulatedFailureException;
 import com.example.gatewaysample.pricing.repository.PriceRepository;
 import com.example.gatewaysample.pricing.service.PriceService;
 import com.example.gatewaysample.pricing.web.dto.PriceRequest;
@@ -10,6 +11,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.time.Duration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PagedModel;
@@ -31,6 +34,9 @@ public class PriceController {
 
     private final PriceRepository priceRepository;
     private final PriceService priceService;
+
+    @Value("${app.dev.slow-delay:5s}")
+    private Duration slowDelay;
 
     public PriceController(PriceRepository priceRepository, PriceService priceService) {
         this.priceRepository = priceRepository;
@@ -55,7 +61,9 @@ public class PriceController {
 
     @GetMapping("/by-product/{productId}")
     @Operation(summary = "Get the current active price for a product")
-    public PriceResponse getActiveForProduct(@PathVariable Long productId) {
+    public PriceResponse getActiveForProduct(
+            @PathVariable Long productId, @RequestParam(defaultValue = "normal") String mode) {
+        applyDevMode(mode);
         return PriceResponse.from(priceService.findActiveForProduct(productId));
     }
 
@@ -86,5 +94,24 @@ public class PriceController {
 
     private Price findOrThrow(Long id) {
         return priceRepository.findById(id).orElseThrow(() -> PriceNotFoundException.forId(id));
+    }
+
+    /**
+     * Development-only downstream behavior for the api-server circuit-breaker demo:
+     * {@code mode=fail} produces a controlled 500, {@code mode=slow} sleeps past api-server's time
+     * limiter. Any other value (including the default {@code normal}) is a no-op.
+     */
+    private void applyDevMode(String mode) {
+        if ("fail".equalsIgnoreCase(mode)) {
+            throw new SimulatedFailureException();
+        }
+        if ("slow".equalsIgnoreCase(mode)) {
+            try {
+                Thread.sleep(slowDelay);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new SimulatedFailureException();
+            }
+        }
     }
 }

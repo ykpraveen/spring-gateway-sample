@@ -1,6 +1,7 @@
 package com.example.gatewaysample.product.web;
 
 import com.example.gatewaysample.product.exception.ProductNotFoundException;
+import com.example.gatewaysample.product.exception.SimulatedFailureException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -24,6 +25,11 @@ public class ProblemDetailExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ProblemDetail> handleDuplicateSku(DataIntegrityViolationException ex) {
         return problemResponse(HttpStatus.CONFLICT, "A product with this SKU already exists", "DUPLICATE_SKU");
+    }
+
+    @ExceptionHandler(SimulatedFailureException.class)
+    public ResponseEntity<ProblemDetail> handleSimulatedFailure(SimulatedFailureException ex) {
+        return problemResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), "SIMULATED_FAILURE");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

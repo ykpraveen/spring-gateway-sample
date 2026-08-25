@@ -14,3 +14,22 @@ management:
     health:
       probes:
         enabled: true
+
+app:
+  downstream:
+    product-service:
+      base-url: ${PRODUCT_SERVICE_URI:http://localhost:8082}
+    pricing-service:
+      base-url: ${PRICING_SERVICE_URI:http://localhost:8083}
+  cache:
+    max-size: 500
+    ttl: 5m
+  circuit-breaker:
+    sliding-window-size: 10
+    minimum-number-of-calls: 5
+    failure-rate-threshold: 50
+    slow-call-duration-threshold: 2s
+    slow-call-rate-threshold: 50
+    wait-duration-in-open-state: 10s
+    permitted-calls-in-half-open-state: 3
+    time-limiter-timeout: 3s

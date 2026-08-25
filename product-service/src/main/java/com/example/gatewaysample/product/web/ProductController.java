@@ -2,6 +2,7 @@ package com.example.gatewaysample.product.web;
 
 import com.example.gatewaysample.product.domain.Product;
 import com.example.gatewaysample.product.exception.ProductNotFoundException;
+import com.example.gatewaysample.product.exception.SimulatedFailureException;
 import com.example.gatewaysample.product.repository.ProductRepository;
 import com.example.gatewaysample.product.web.dto.ProductRequest;
 import com.example.gatewaysample.product.web.dto.ProductResponse;
@@ -9,6 +10,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.time.Duration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PagedModel;
@@ -20,6 +23,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -28,6 +32,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProductController {
 
     private final ProductRepository productRepository;
+
+    @Value("${app.dev.slow-delay:5s}")
+    private Duration slowDelay;
 
     public ProductController(ProductRepository productRepository) {
         this.productRepository = productRepository;
@@ -42,7 +49,9 @@ public class ProductController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get a product by id")
-    public ProductResponse get(@PathVariable Long id) {
+    public ProductResponse get(
+            @PathVariable Long id, @RequestParam(defaultValue = "normal") String mode) {
+        applyDevMode(mode);
         return ProductResponse.from(findOrThrow(id));
     }
 
@@ -76,5 +85,24 @@ public class ProductController {
 
     private Product findOrThrow(Long id) {
         return productRepository.findById(id).orElseThrow(() -> new ProductNotFoundException(id));
+    }
+
+    /**
+     * Development-only downstream behavior for the api-server circuit-breaker demo:
+     * {@code mode=fail} produces a controlled 500, {@code mode=slow} sleeps past api-server's time
+     * limiter. Any other value (including the default {@code normal}) is a no-op.
+     */
+    private void applyDevMode(String mode) {
+        if ("fail".equalsIgnoreCase(mode)) {
+            throw new SimulatedFailureException();
+        }
+        if ("slow".equalsIgnoreCase(mode)) {
+            try {
+                Thread.sleep(slowDelay);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new SimulatedFailureException();
+            }
+        }
     }
 }

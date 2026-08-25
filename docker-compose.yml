@@ -44,9 +44,15 @@ services:
       SPRING_PROFILES_ACTIVE: local
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
       APP_SECURITY_JWT_ISSUER: ${KEYCLOAK_ISSUER_URI}
+      PRODUCT_SERVICE_URI: http://product-service:8082
+      PRICING_SERVICE_URI: http://pricing-service:8083
     depends_on:
       keycloak:
         condition: service_healthy
+      product-service:
+        condition: service_started
+      pricing-service:
+        condition: service_started
     networks:
       - gateway-sample-net
 
@@ -102,6 +108,9 @@ services:
 
 # All four Spring services now depend on keycloak (Phase 3 JWT validation).
 # gateway also depends on postgres (api_client schema/table) and redis
-# (validated API-client metadata cache) as of Phase 4. web-ui has no
-# inter-service calls until Phase 7, so it still has no depends_on/
-# healthcheck-gated startup ordering.
+# (validated API-client metadata cache) as of Phase 4. api-server depends on
+# product-service/pricing-service (WebClient delegation, Phase 6) but only
+# with service_started, since neither defines a healthcheck; api-server's own
+# circuit breakers and cached fallbacks tolerate them not being ready yet.
+# web-ui has no inter-service calls until Phase 7, so it still has no
+# depends_on/healthcheck-gated startup ordering.

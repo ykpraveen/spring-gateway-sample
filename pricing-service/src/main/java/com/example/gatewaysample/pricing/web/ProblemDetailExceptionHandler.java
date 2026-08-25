@@ -1,6 +1,7 @@
 package com.example.gatewaysample.pricing.web;
 
 import com.example.gatewaysample.pricing.exception.PriceNotFoundException;
+import com.example.gatewaysample.pricing.exception.SimulatedFailureException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -25,6 +26,11 @@ public class ProblemDetailExceptionHandler {
     public ResponseEntity<ProblemDetail> handleConflict(DataIntegrityViolationException ex) {
         return problemResponse(
                 HttpStatus.CONFLICT, "The product already has an active price", "ACTIVE_PRICE_CONFLICT");
+    }
+
+    @ExceptionHandler(SimulatedFailureException.class)
+    public ResponseEntity<ProblemDetail> handleSimulatedFailure(SimulatedFailureException ex) {
+        return problemResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), "SIMULATED_FAILURE");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

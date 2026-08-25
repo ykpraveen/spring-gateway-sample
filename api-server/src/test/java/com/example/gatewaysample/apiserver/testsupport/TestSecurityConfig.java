@@ -1,4 +1,4 @@
-package com.example.gatewaysample.apiserver.security;
+package com.example.gatewaysample.apiserver.testsupport;
 
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -10,7 +10,7 @@ import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 
 /** Replaces the JWKS-backed {@link ReactiveJwtDecoder} with one that trusts {@link TestJwtSupport}-signed tokens. */
 @TestConfiguration
-class TestSecurityConfig {
+public class TestSecurityConfig {
 
     @Bean
     @Primary
