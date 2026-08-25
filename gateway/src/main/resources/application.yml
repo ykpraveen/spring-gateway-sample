@@ -58,7 +58,7 @@ management:
 
 app:
   cors:
-    allowed-origins: ${APP_CORS_ALLOWED_ORIGIN:http://localhost:5173}
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGIN:http://localhost:5173,http://localhost:8090}
   rate-limit:
     route:
       read:
