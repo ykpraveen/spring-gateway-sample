@@ -13,6 +13,14 @@
 # it and drains that same bucket — X-Forwarded-For tagging doesn't isolate the route bucket, only
 # the client/IP ones. A short wait lets it refill (burst 20, refill 10/sec) before this scenario
 # needs its own headroom there.
+#
+# The 24 requests are fired concurrently rather than in a sequential curl loop: the IP bucket's
+# 8/sec refill is the most forgiving of the three, so on a loaded CI runner a sequential loop can
+# pace itself below 8 req/sec (each curl round-trip competing for CPU with 12+ other containers)
+# and never trip the bucket at all -- refills keep up with consumption indefinitely. Firing the
+# burst concurrently decouples the bucket's arrival rate from client-side round-trip latency; the
+# underlying token bucket is a Redis Lua script (see TokenBucketRateLimiter), so it's already safe
+# under concurrent access.
 scenario_4_ip_bucket() {
   heading "Criterion 4: per-IP rate-limit bucket via simulated X-Forwarded-For"
 
@@ -34,10 +42,11 @@ scenario_4_ip_bucket() {
   done
 
   local heavy_ip="203.0.113.1" light_ip="203.0.113.2"
-  local heavy_success=0 heavy_ip_limited=0 light_success=0 light_ip_limited=0
   local total=24
-  local i status code fwd key_idx
+  local tmp_dir
+  tmp_dir="$(mktemp -d)"
 
+  local i key_idx fwd
   for i in $(seq 1 "$total"); do
     key_idx=$(( (i - 1) % num_keys ))
     if (( i % 6 == 0 )); then
@@ -45,19 +54,30 @@ scenario_4_ip_bucket() {
     else
       fwd="$heavy_ip"
     fi
-    status=$(http_status GET "$GATEWAY_URL/api/products" \
-      -H "Authorization: Bearer $token" -H "X-API-Key: ${keys[$key_idx]}" \
-      -H "X-Forwarded-For: $fwd")
-    code=""
-    [[ "$status" == "429" ]] && code=$(body_json '.code')
-    if [[ "$fwd" == "$heavy_ip" ]]; then
-      [[ "$status" == "200" ]] && heavy_success=$((heavy_success + 1))
-      [[ "$code" == "IP_LIMIT_EXCEEDED" ]] && heavy_ip_limited=$((heavy_ip_limited + 1))
+    (
+      status=$(http_status_at "$tmp_dir/body-$i" GET "$GATEWAY_URL/api/products" \
+        -H "Authorization: Bearer $token" -H "X-API-Key: ${keys[$key_idx]}" \
+        -H "X-Forwarded-For: $fwd")
+      code=""
+      [[ "$status" == "429" ]] && code=$(jq -r '.code' "$tmp_dir/body-$i" 2>/dev/null)
+      printf '%s|%s|%s\n' "$fwd" "$status" "$code" > "$tmp_dir/result-$i"
+    ) &
+  done
+  wait
+
+  local heavy_success=0 heavy_ip_limited=0 light_success=0 light_ip_limited=0
+  local result_fwd result_status result_code
+  for i in $(seq 1 "$total"); do
+    IFS='|' read -r result_fwd result_status result_code < "$tmp_dir/result-$i"
+    if [[ "$result_fwd" == "$heavy_ip" ]]; then
+      [[ "$result_status" == "200" ]] && heavy_success=$((heavy_success + 1))
+      [[ "$result_code" == "IP_LIMIT_EXCEEDED" ]] && heavy_ip_limited=$((heavy_ip_limited + 1))
     else
-      [[ "$status" == "200" ]] && light_success=$((light_success + 1))
-      [[ "$code" == "IP_LIMIT_EXCEEDED" ]] && light_ip_limited=$((light_ip_limited + 1))
+      [[ "$result_status" == "200" ]] && light_success=$((light_success + 1))
+      [[ "$result_code" == "IP_LIMIT_EXCEEDED" ]] && light_ip_limited=$((light_ip_limited + 1))
     fi
   done
+  rm -rf "$tmp_dir"
 
   info "heavy IP ($heavy_ip): $heavy_success succeeded, $heavy_ip_limited rejected by its IP bucket"
   info "light IP ($light_ip): $light_success succeeded, $light_ip_limited rejected by its IP bucket"
