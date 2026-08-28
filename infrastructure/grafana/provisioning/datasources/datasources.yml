@@ -3,16 +3,35 @@ apiVersion: 1
 datasources:
   - name: Prometheus
     type: prometheus
+    uid: prometheus
     access: proxy
     url: http://prometheus:9090
     isDefault: true
 
   - name: Loki
     type: loki
+    uid: loki
     access: proxy
     url: http://loki:3100
+    jsonData:
+      # Lets a log line found in Explore jump straight to its trace in Tempo: matches the
+      # trace_id field emitted by logging.structured.format.console=logstash (see each Spring
+      # module's application.yml) and Alloy's structured-metadata extraction of the same field.
+      derivedFields:
+        - datasourceUid: tempo
+          matcherRegex: "\"trace_id\":\"(\\w+)\""
+          name: TraceID
+          url: "$${__value.raw}"
 
   - name: Tempo
     type: tempo
+    uid: tempo
     access: proxy
     url: http://tempo:3200
+    jsonData:
+      # The reverse direction: from a trace span in Tempo, jump to the matching Loki logs.
+      tracesToLogsV2:
+        datasourceUid: loki
+        spanStartTimeShift: "-5m"
+        spanEndTimeShift: "5m"
+        filterByTraceID: true

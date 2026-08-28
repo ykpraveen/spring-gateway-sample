@@ -3,6 +3,7 @@ package com.example.gatewaysample.gateway.ratelimit;
 import com.example.gatewaysample.gateway.apikey.dto.ApiClientPrincipal;
 import com.example.gatewaysample.gateway.config.GatewayAttributes;
 import com.example.gatewaysample.gateway.web.exception.RateLimitExceededException;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.cloud.gateway.route.Route;
@@ -26,12 +27,17 @@ public class RateLimitGlobalFilter implements GlobalFilter, Ordered {
     private final TokenBucketRateLimiter rateLimiter;
     private final RateLimitProperties properties;
     private final ClientIpResolver clientIpResolver;
+    private final MeterRegistry meterRegistry;
 
     public RateLimitGlobalFilter(
-            TokenBucketRateLimiter rateLimiter, RateLimitProperties properties, ClientIpResolver clientIpResolver) {
+            TokenBucketRateLimiter rateLimiter,
+            RateLimitProperties properties,
+            ClientIpResolver clientIpResolver,
+            MeterRegistry meterRegistry) {
         this.rateLimiter = rateLimiter;
         this.properties = properties;
         this.clientIpResolver = clientIpResolver;
+        this.meterRegistry = meterRegistry;
     }
 
     @Override
@@ -59,12 +65,14 @@ public class RateLimitGlobalFilter implements GlobalFilter, Ordered {
                     String clientKey = "rl:" + routeId + ":client:" + apiClientId(apiClient) + ":user:" + jwtSubject;
                     String ipKey = "rl:" + routeId + ":ip:" + clientIp;
 
-                    return consumeSequentially(routeKey, routeBucket, clientKey, properties.client(), ipKey, properties.ip())
+                    return consumeSequentially(
+                                    routeId, routeKey, routeBucket, clientKey, properties.client(), ipKey, properties.ip())
                             .flatMap(allowed -> chain.filter(exchange));
                 });
     }
 
     private Mono<Boolean> consumeSequentially(
+            String routeId,
             String routeKey,
             RateLimitProperties.Bucket routeBucket,
             String clientKey,
@@ -72,16 +80,19 @@ public class RateLimitGlobalFilter implements GlobalFilter, Ordered {
             String ipKey,
             RateLimitProperties.Bucket ipBucket) {
         return rateLimiter.tryConsume(routeKey, routeBucket).flatMap(routeAllowed -> {
+            recordOutcome(routeId, RateLimitScope.ROUTE, routeAllowed);
             if (!routeAllowed) {
                 return Mono.error(new RateLimitExceededException(RateLimitScope.ROUTE));
             }
             return rateLimiter.tryConsume(clientKey, clientBucket).flatMap(clientAllowed -> {
+                recordOutcome(routeId, RateLimitScope.CLIENT, clientAllowed);
                 if (!clientAllowed) {
                     return rateLimiter
                             .refund(routeKey, routeBucket)
                             .then(Mono.error(new RateLimitExceededException(RateLimitScope.CLIENT)));
                 }
                 return rateLimiter.tryConsume(ipKey, ipBucket).flatMap(ipAllowed -> {
+                    recordOutcome(routeId, RateLimitScope.IP, ipAllowed);
                     if (!ipAllowed) {
                         return rateLimiter
                                 .refund(routeKey, routeBucket)
@@ -92,6 +103,16 @@ public class RateLimitGlobalFilter implements GlobalFilter, Ordered {
                 });
             });
         });
+    }
+
+    private void recordOutcome(String routeId, RateLimitScope scope, boolean allowed) {
+        meterRegistry
+                .counter(
+                        "gateway.rate_limit.requests",
+                        "route", routeId,
+                        "scope", scope.name().toLowerCase(),
+                        "outcome", allowed ? "allowed" : "rejected")
+                .increment();
     }
 
     private RateLimitProperties.Bucket routeBucketFor(Route route) {
