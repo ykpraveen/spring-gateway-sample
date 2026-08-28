@@ -126,12 +126,21 @@ provision_api_key() {
   echo "$raw_key"
 }
 
+# http_status_at BODY_FILE METHOD URL [HEADER...] -- like http_status but writes the body to
+# the given file instead of the shared $BODY_FILE, so it's safe to call from background
+# subshells fired concurrently (each with its own file) without racing on a shared one.
+http_status_at() {
+  local body_file="$1" method="$2" url="$3"
+  shift 3
+  curl -s -o "$body_file" -w '%{http_code}' -X "$method" "$@" "$url"
+}
+
 # http_status METHOD URL [HEADER...] -- writes body to $BODY_FILE, prints status code
 BODY_FILE="$(mktemp)"
 http_status() {
   local method="$1" url="$2"
   shift 2
-  curl -s -o "$BODY_FILE" -w '%{http_code}' -X "$method" "$@" "$url"
+  http_status_at "$BODY_FILE" "$method" "$url" "$@"
 }
 
 body_json() {
