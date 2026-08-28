@@ -1,0 +1,54 @@
+name: Smoke Tests
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-tests
+  cancel-in-progress: false
+
+jobs:
+  smoke-tests:
+    name: Run smoke-tests/ against a full Compose deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Create .env from template
+        run: cp .env.example .env
+
+      - name: Start full Compose deployment
+        run: docker compose -f docker-compose.infra.yml -f docker-compose.yml up -d --build
+
+      - name: Wait for services to become ready
+        run: |
+          for i in $(seq 1 60); do
+            g=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/actuator/health/readiness || true)
+            a=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8081/actuator/health/readiness || true)
+            p=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8082/actuator/health/readiness || true)
+            pr=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8083/actuator/health/readiness || true)
+            echo "attempt $i: gateway=$g api-server=$a product=$p pricing=$pr"
+            if [[ "$g" == "200" && "$a" == "200" && "$p" == "200" && "$pr" == "200" ]]; then
+              echo "All services ready"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Services did not become ready in time" >&2
+          docker compose -f docker-compose.infra.yml -f docker-compose.yml ps
+          exit 1
+
+      - name: Run smoke-tests/run.sh
+        run: ./smoke-tests/run.sh
+
+      - name: Dump container logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.infra.yml -f docker-compose.yml logs --no-color
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.infra.yml -f docker-compose.yml down -v

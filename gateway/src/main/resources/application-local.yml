@@ -25,12 +25,21 @@ app:
       pepper: ${API_KEY_PEPPER:dev-only-api-key-pepper-change-me}
       cache-ttl: 60s
   rate-limit:
-    # Development-only: trusts X-Forwarded-For from localhost so the traffic simulator can
-    # present simulated client IPs for the per-IP rate-limit bucket. Never enabled outside local
-    # development.
+    # Development-only: trusts X-Forwarded-For so the traffic simulator (or a curl-based demo
+    # script) can present simulated client IPs for the per-IP rate-limit bucket. Never enabled
+    # outside local development.
+    #
+    # 127.0.0.1/::1 cover running this service directly on the host (`SPRING_PROFILES_ACTIVE=
+    # local` against host-run backing services, per CLAUDE.md). The CIDR covers the containerized
+    # Docker Compose deployment instead: host-to-container traffic arrives at the gateway with a
+    # remote address of the bridge network's gateway IP, not loopback, because Docker's userland
+    # proxy rewrites the source address on the way in. That subnet is pinned in
+    # docker-compose.yml/docker-compose.infra.yml's `gateway-sample-net.ipam.config` specifically
+    # so this CIDR stays valid; if that subnet ever changes, update this to match.
     trusted-proxies:
       - 127.0.0.1
       - "0:0:0:0:0:0:0:1"
+      - 172.28.1.0/24
 
 logging:
   level:
