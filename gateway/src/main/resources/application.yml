@@ -82,6 +82,6 @@ app:
       replenish-rate: 5
       burst-capacity: 10
     ip:
-      replenish-rate: 15
-      burst-capacity: 30
+      replenish-rate: 8
+      burst-capacity: 15
     trusted-proxies: []

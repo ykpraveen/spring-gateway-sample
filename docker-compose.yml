@@ -1,6 +1,9 @@
 networks:
   gateway-sample-net:
     name: ${COMPOSE_NETWORK:-gateway-sample-net}
+    ipam:
+      config:
+        - subnet: 172.28.1.0/24
 
 services:
   gateway:
