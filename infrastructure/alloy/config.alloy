@@ -1,9 +1,67 @@
 // Grafana Alloy configuration (replaces Promtail, which is EOL).
 //
-// Real log-source components (structured JSON application logs correlated by
-// trace ID, discovered via the Docker daemon or a shared volume) are wired up
-// in Phase 8. For now this just declares the Loki write destination so the
-// container starts with a valid config.
+// Discovers every container on the shared compose network via the Docker daemon, tails its
+// stdout/stderr, and ships it to Loki. The four Spring services log structured JSON
+// (`logging.structured.format.console: logstash`, see each module's application.yml) with
+// `trace_id`/`span_id` fields populated by Micrometer Tracing, so logs from a single request can
+// be correlated with its trace in Tempo (see the Loki/Tempo derived-field wiring in
+// infrastructure/grafana/provisioning/datasources/datasources.yml).
+
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "containers" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+}
+
+loki.source.docker "containers" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.docker.containers.targets
+  labels        = {"job" = "docker"}
+  relabel_rules = discovery.relabel.containers.rules
+  forward_to    = [loki.process.containers.receiver]
+}
+
+loki.process "containers" {
+  // Non-JSON lines (e.g. Postgres/Keycloak/Redis startup banners) fail stage.json silently and
+  // pass through unparsed, so this pipeline is safe for every container, not just the Spring ones.
+  stage.json {
+    expressions = {
+      trace_id = "trace_id",
+      span_id  = "span_id",
+      level    = "level",
+    }
+  }
+
+  // Kept out of stream labels (see limits_config.allow_structured_metadata in loki-config.yaml) —
+  // trace_id/span_id are per-request and would otherwise blow up Loki's series cardinality.
+  stage.structured_metadata {
+    values = {
+      trace_id = "",
+      span_id  = "",
+    }
+  }
+
+  stage.labels {
+    values = {
+      level = "",
+    }
+  }
+
+  forward_to = [loki.write.default.receiver]
+}
 
 loki.write "default" {
   endpoint {

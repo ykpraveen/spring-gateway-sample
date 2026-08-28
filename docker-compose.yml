@@ -24,6 +24,7 @@ services:
       APP_SECURITY_API_KEY_PEPPER: ${API_KEY_PEPPER}
       API_SERVER_URI: http://api-server:8081
       APP_CORS_ALLOWED_ORIGIN: ${APP_CORS_ALLOWED_ORIGIN}
+      OTLP_TRACING_ENDPOINT: http://tempo:4318/v1/traces
     depends_on:
       postgres:
         condition: service_healthy
@@ -46,6 +47,7 @@ services:
       APP_SECURITY_JWT_ISSUER: ${KEYCLOAK_ISSUER_URI}
       PRODUCT_SERVICE_URI: http://product-service:8082
       PRICING_SERVICE_URI: http://pricing-service:8083
+      OTLP_TRACING_ENDPOINT: http://tempo:4318/v1/traces
     depends_on:
       keycloak:
         condition: service_healthy
@@ -69,6 +71,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
       APP_SECURITY_JWT_ISSUER: ${KEYCLOAK_ISSUER_URI}
+      OTLP_TRACING_ENDPOINT: http://tempo:4318/v1/traces
     depends_on:
       postgres:
         condition: service_healthy
@@ -90,6 +93,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
       APP_SECURITY_JWT_ISSUER: ${KEYCLOAK_ISSUER_URI}
+      OTLP_TRACING_ENDPOINT: http://tempo:4318/v1/traces
     depends_on:
       postgres:
         condition: service_healthy

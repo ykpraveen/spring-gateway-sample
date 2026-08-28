@@ -2,10 +2,23 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
-# Per-service scrape targets are added in Phase 8 once the app services
-# expose /actuator/prometheus on the shared compose network. This stub keeps
-# the container startable during earlier phases.
 scrape_configs:
   - job_name: prometheus
     static_configs:
       - targets: ["localhost:9090"]
+
+  - job_name: spring-services
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["gateway:8080"]
+        labels:
+          service: gateway
+      - targets: ["api-server:8081"]
+        labels:
+          service: api-server
+      - targets: ["product-service:8082"]
+        labels:
+          service: product-service
+      - targets: ["pricing-service:8083"]
+        labels:
+          service: pricing-service
